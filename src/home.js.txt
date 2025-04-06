@@ -20,76 +20,75 @@ const Home = ({ contract }) => {
 
 
 
-    const loadPosts = async () => {
-        setLoading(true);
+const loadPosts = async () => {
+    setLoading(true);
 
-        try {
-            const address = await contract.signer.getAddress();
-            setAddress(address);
+    try {
+        const address = await contract.signer.getAddress();
+        setAddress(address);
 
-            const balance = await contract.balanceOf(address);
-            setHasProfile(balance.toNumber() > 0);
+        const balance = await contract.balanceOf(address);
+        setHasProfile(balance.toNumber() > 0);
 
-            const results = await contract.getAllPosts();
-            const posts = await Promise.all(results.map(async (post) => {
-                const response = await fetch(`${pinataGateway}${post.hash}?pinataGatewayToken=${pinataGatewayToken}`);
-                const metadata = await response.json();
-                console.log(response);
+        const results = await contract.getAllPosts();
+        const posts = await Promise.all(results.map(async (post) => {
+            const response = await fetch(`${pinataGateway}${post.hash}?pinataGatewayToken=${pinataGatewayToken}`);
+            const metadata = await response.json();
 
-                const nftId = await contract.profiles(post.author);
-                const uri = await contract.tokenURI(nftId);
-                const profileResponse = await fetch(uri);
-                const profileMetadata = await profileResponse.json();
+            const nftId = await contract.profiles(post.author);
+            const uri = await contract.tokenURI(nftId);
+            const profileResponse = await fetch(uri);
+            const profileMetadata = await profileResponse.json();
 
-                return {
-                    id: post.id,
-                    content: metadata.post,
-                    tipAmount: post.tipAmount,
-                    author: {
-                        address: post.author,
-                        username: profileMetadata.username,
-                        avatar: profileMetadata.avatar,
-                    },
-                };
-            }));
-
-            setPosts(posts.sort((a, b) => b.tipAmount - a.tipAmount));
-        } catch (error) {
-            console.error('Error loading posts:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadPosts();
-    }, []);
-
-    const uploadPost = async () => {
-        if (!post) {
-            window.alert('Please enter a post!');
-            return;
-        }
-
-        const postContent = { post };
-
-        try {
-            const response = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', postContent, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${pinataJWT}`,
+            return {
+                id: post.id,
+                content: metadata.content,
+                tipAmount: post.tipAmount,
+                author: {
+                    address: post.author,
+                    username: profileMetadata.username,
+                    avatar: profileMetadata.avatar,
                 },
-            });
+            };
+        }));
 
-            const { IpfsHash } = response.data;
-            if (!IpfsHash) throw new Error('Failed to upload post to Pinata');
+        setPosts(posts.sort((a, b) => b.tipAmount - a.tipAmount));
+    } catch (error) {
+        console.error('Error loading posts:', error);
+    } finally {
+        setLoading(false);
+    }
+};
 
-            await (await contract.uploadPost(IpfsHash)).wait();
-            loadPosts();
-        } catch (error) {
-            window.alert(`Error uploading post: ${error.message}`);
-        }
-    };
+useEffect(() => {
+    loadPosts();
+}, []);
+
+const uploadPost = async () => {
+    if (!post) {
+        window.alert('Please enter a post!');
+        return;
+    }
+
+    const postContent = { post };
+
+    try {
+        const response = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', postContent, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${pinataJWT}`,
+            },
+        });
+
+        const { IpfsHash } = response.data;
+        if (!IpfsHash) throw new Error('Failed to upload post to Pinata');
+
+        await (await contract.uploadPost(IpfsHash)).wait();
+        loadPosts();
+    } catch (error) {
+        window.alert(`Error uploading post: ${error.message}`);
+    }
+};
 
 
     const tip = async (post) => {
@@ -115,9 +114,9 @@ const Home = ({ contract }) => {
                             <Row className="g-4">
                                 <Form.Control onChange={(e) => setPost(e.target.value)} size="lg" required as="textarea" />
                                 <div className="d-grid px-0">
-                                    <Button onClick={() => uploadPost(post)} variant="primary" size="lg">
-                                        Post!
-                                    </Button>
+                                <Button onClick={() => uploadPost(post)} variant="primary" size="lg">
+      Post!
+  </Button>
 
                                 </div>
                             </Row>
@@ -156,9 +155,8 @@ const Home = ({ contract }) => {
                                 </Card.Header>
                                 <Card.Body color="secondary">
                                     <Card.Title>
-                                        {post.content || 'No content available'}
+                                        {post.content}
                                     </Card.Title>
-                                    
                                 </Card.Body>
                                 <Card.Footer className="list-group-item">
                                     <div className="d-inline mt-auto float-start">Tip Amount: {ethers.utils.formatEther(post.tipAmount)} ETH</div>
